@@ -7,11 +7,28 @@ import os
 from dotenv import load_dotenv
 
 # TODO: Import your custom modules here as you build them
+# Implementation Guide:
+# 1. Create services/ directory with these modules:
+#    - rag_service.py: Main RAG orchestration logic
+#    - document_processor.py: File parsing and text extraction
+#    - vector_store.py: Embedding storage and retrieval
+#    - openai_client.py: OpenAI API integration
+#    - chunking_service.py: Smart text chunking
+# 2. Create database/ directory with:
+#    - models.py: Pydantic models for database schemas
+#    - connection.py: Supabase client setup
+#    - repositories.py: Database CRUD operations
+# 3. Create utils/ directory with:
+#    - file_utils.py: File validation and storage
+#    - text_utils.py: Text processing utilities
+
+# Uncomment these as you implement the modules:
 # from .services.rag_service import RAGService
 # from .services.document_processor import DocumentProcessor
 # from .services.vector_store import VectorStore
+# from .services.openai_client import OpenAIClient
 # from .database.models import Document, Chat
-# from .database.connection import get_db
+# from .database.connection import get_supabase_client
 
 # Load environment variables
 load_dotenv()
@@ -82,13 +99,64 @@ async def upload_document(file: UploadFile = File(...)):
     """
     Upload and process a document for RAG
     
-    TODO: Implement the following:
-    1. Validate file type (PDF, DOCX, TXT)
-    2. Save file to storage (local or cloud)
-    3. Extract text content
-    4. Create embeddings
-    5. Store in vector database
-    6. Save metadata to Supabase
+    IMPLEMENTATION STEPS:
+    1. VALIDATE FILE TYPE AND SIZE
+       - Check file.content_type against allowed types
+       - Validate file size (e.g., max 10MB)
+       - Check file extension matches content type
+    
+    2. SAVE FILE TO STORAGE
+       - Create unique filename with UUID
+       - Save to local storage or Supabase Storage
+       - Store file path for later retrieval
+    
+    3. EXTRACT TEXT CONTENT
+       - Use PyPDF2 for PDF files
+       - Use python-docx for DOCX files
+       - Handle plain text files directly
+       - Extract metadata (title, author, page count)
+    
+    4. CHUNK TEXT INTELLIGENTLY
+       - Split text into 1000-1500 character chunks
+       - Use sentence boundaries for natural splits
+       - Add 100-200 character overlap between chunks
+       - Preserve paragraph structure when possible
+    
+    5. GENERATE EMBEDDINGS
+       - Use OpenAI text-embedding-3-small model
+       - Process chunks in batches to manage API limits
+       - Handle rate limiting with exponential backoff
+       - Store embeddings as vectors in database
+    
+    6. STORE IN DATABASE
+       - Save document metadata to documents table
+       - Store chunks with embeddings in document_chunks table
+       - Create relationships between document and chunks
+       - Set up proper indexing for vector search
+    
+    EXAMPLE IMPLEMENTATION STRUCTURE:
+    ```python
+    # Validate file
+    if not validate_file(file):
+        raise HTTPException(400, "Invalid file")
+    
+    # Save file
+    file_path = await save_file(file)
+    
+    # Extract text
+    text_content = extract_text(file_path, file.content_type)
+    
+    # Chunk text
+    chunks = chunk_text(text_content)
+    
+    # Generate embeddings
+    embeddings = await generate_embeddings(chunks)
+    
+    # Store in database
+    doc_id = await store_document(file.filename, file_path, chunks, embeddings)
+    
+    return DocumentUploadResponse(document_id=doc_id, ...)
+    ```
     """
     try:
         # Placeholder implementation

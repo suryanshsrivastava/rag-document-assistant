@@ -11,7 +11,7 @@ from datetime import datetime
 
 from .document_processor import DocumentProcessor
 from .chunking_service import ChunkingService
-from .openai_client import OpenAIClient
+from .gemini_client import GeminiClient
 from .vector_store import VectorStore
 from ..database.connection import get_supabase_client
 
@@ -24,7 +24,7 @@ class RAGService:
         """Initialize RAG service with all required components."""
         self.document_processor = DocumentProcessor()
         self.chunking_service = ChunkingService()
-        self.openai_client = OpenAIClient()
+        self.gemini_client = GeminiClient()
         self.vector_store = VectorStore()
         self.supabase = get_supabase_client()
         
@@ -55,7 +55,7 @@ class RAGService:
             # Step 3: Generate embeddings for chunks
             logger.info("Generating embeddings")
             chunk_texts = [chunk["chunk_text"] for chunk in chunks]
-            embeddings = await self.openai_client.generate_embeddings(chunk_texts)
+            embeddings = await self.gemini_client.generate_embeddings(chunk_texts)
             
             # Step 4: Store document metadata
             logger.info("Storing document metadata")
@@ -104,7 +104,7 @@ class RAGService:
         try:
             # Step 1: Generate embedding for user query
             logger.info("Generating query embedding")
-            query_embeddings = await self.openai_client.generate_embeddings([user_message])
+            query_embeddings = await self.gemini_client.generate_embeddings([user_message])
             query_embedding = query_embeddings[0]
             
             # Step 2: Search for similar chunks
@@ -117,7 +117,7 @@ class RAGService:
             
             # Step 3: Generate RAG response
             logger.info("Generating RAG response")
-            response = await self.openai_client.generate_rag_response(
+            response = await self.gemini_client.generate_rag_response(
                 user_message,
                 similar_chunks,
                 conversation_history
@@ -315,10 +315,10 @@ class RAGService:
             logger.error(f"Database connection test failed: {str(e)}")
         
         try:
-            # Test OpenAI connection
-            results["openai"] = await self.openai_client.test_connection()
+            # Test Gemini connection
+            results["gemini"] = await self.gemini_client.test_connection()
         except Exception as e:
-            results["openai"] = False
-            logger.error(f"OpenAI connection test failed: {str(e)}")
+            results["gemini"] = False
+            logger.error(f"Gemini connection test failed: {str(e)}")
         
         return results 

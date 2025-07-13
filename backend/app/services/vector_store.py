@@ -8,7 +8,7 @@ import uuid
 from typing import List, Dict, Any, Optional
 from datetime import datetime
 import logging
-from .database.connection import get_supabase_client
+from ..database.connection import get_supabase_client
 
 logger = logging.getLogger(__name__)
 

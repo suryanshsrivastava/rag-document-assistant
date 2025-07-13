@@ -8,7 +8,7 @@ The backend is built with the following components:
 
 - **FastAPI**: Web framework for API endpoints
 - **Supabase**: PostgreSQL database with vector storage
-- **OpenAI**: Embeddings and chat completions
+- **Google Gemini**: Embeddings and chat completions
 - **Document Processing**: PDF, DOCX, and text file support
 
 ## 📁 Project Structure
@@ -49,8 +49,8 @@ Create a `.env` file in the backend directory:
 SUPABASE_URL=your_supabase_url
 SUPABASE_ANON_KEY=your_supabase_anon_key
 
-# OpenAI Configuration
-OPENAI_API_KEY=your_openai_api_key
+# Google Gemini Configuration
+GEMINI_API_KEY=your_gemini_api_key
 ```
 
 ### 3. Set Up Database
@@ -153,9 +153,9 @@ uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 - Maintains 200 character overlap between chunks
 - Preserves sentence boundaries for natural splits
 
-### OpenAI Client
-- Generates embeddings using `text-embedding-3-small`
-- Creates chat completions using GPT-4
+### Gemini Client
+- Generates embeddings using `models/embedding-001`
+- Creates chat completions using Gemini 2.0 Flash
 - Handles rate limiting and batch processing
 
 ### Vector Store
@@ -190,7 +190,7 @@ This will test:
 |----------|-------------|----------|
 | `SUPABASE_URL` | Your Supabase project URL | Yes |
 | `SUPABASE_ANON_KEY` | Your Supabase anonymous key | Yes |
-| `OPENAI_API_KEY` | Your OpenAI API key | Yes |
+| `GEMINI_API_KEY` | Your Google Gemini API key | Yes |
 
 ## 🚨 Troubleshooting
 
@@ -203,7 +203,7 @@ This will test:
 
 2. **Database Connection**: Verify Supabase credentials and table setup
 
-3. **OpenAI API**: Check API key and rate limits
+3. **Gemini API**: Check API key and rate limits
 
 4. **File Upload**: Ensure upload directory exists and has write permissions
 
@@ -240,7 +240,7 @@ logging.basicConfig(level=logging.DEBUG)
 Key dependencies include:
 - `fastapi`: Web framework
 - `supabase`: Database client
-- `openai`: OpenAI API client
+- `google-generativeai`: Google Gemini API client
 - `PyPDF2`: PDF text extraction
 - `python-docx`: DOCX text extraction
 - `pydantic`: Data validation

@@ -11,9 +11,9 @@ from datetime import datetime
 from .services.rag_service import RAGService
 from .services.document_processor import DocumentProcessor
 from .services.vector_store import VectorStore
-from .services.openai_client import OpenAIClient
+from .services.gemini_client import GeminiClient
 from .services.chunking_service import ChunkingService
-from .database.models import Document, Chat, DocumentUploadResponse, ChatRequest, ChatResponse, DocumentInfo, HealthCheckResponse
+from .database.models import Document, DocumentUploadResponse, ChatRequest, ChatResponse, DocumentInfo, HealthCheckResponse
 from .database.connection import get_supabase_client, test_database_connection
 
 # Load environment variables
@@ -51,8 +51,8 @@ async def health_check():
         # Test database connection
         db_connected = await test_database_connection()
         
-        # Test OpenAI connection
-        openai_connected = await rag_service.openai_client.test_connection()
+        # Test Gemini connection
+        gemini_connected = await rag_service.gemini_client.test_connection()
         
         return HealthCheckResponse(
             status="healthy",

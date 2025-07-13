@@ -5,30 +5,16 @@ from pydantic import BaseModel
 from typing import List, Optional
 import os
 from dotenv import load_dotenv
+from datetime import datetime
 
-# TODO: Import your custom modules here as you build them
-# Implementation Guide:
-# 1. Create services/ directory with these modules:
-#    - rag_service.py: Main RAG orchestration logic
-#    - document_processor.py: File parsing and text extraction
-#    - vector_store.py: Embedding storage and retrieval
-#    - openai_client.py: OpenAI API integration
-#    - chunking_service.py: Smart text chunking
-# 2. Create database/ directory with:
-#    - models.py: Pydantic models for database schemas
-#    - connection.py: Supabase client setup
-#    - repositories.py: Database CRUD operations
-# 3. Create utils/ directory with:
-#    - file_utils.py: File validation and storage
-#    - text_utils.py: Text processing utilities
-
-# Uncomment these as you implement the modules:
-# from .services.rag_service import RAGService
-# from .services.document_processor import DocumentProcessor
-# from .services.vector_store import VectorStore
-# from .services.openai_client import OpenAIClient
-# from .database.models import Document, Chat
-# from .database.connection import get_supabase_client
+# Import implemented services
+from .services.rag_service import RAGService
+from .services.document_processor import DocumentProcessor
+from .services.vector_store import VectorStore
+from .services.openai_client import OpenAIClient
+from .services.chunking_service import ChunkingService
+from .database.models import Document, Chat, DocumentUploadResponse, ChatRequest, ChatResponse, DocumentInfo, HealthCheckResponse
+from .database.connection import get_supabase_client, test_database_connection
 
 # Load environment variables
 load_dotenv()
@@ -49,34 +35,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Pydantic models for request/response schemas
-class DocumentUploadResponse(BaseModel):
-    """Response model for document upload"""
-    document_id: str
-    filename: str
-    status: str
-    message: str
-
-class ChatRequest(BaseModel):
-    """Request model for chat interactions"""
-    message: str
-    document_ids: Optional[List[str]] = None
-    conversation_id: Optional[str] = None
-
-class ChatResponse(BaseModel):
-    """Response model for chat interactions"""
-    response: str
-    sources: List[dict]
-    conversation_id: str
-
-class DocumentInfo(BaseModel):
-    """Response model for document information"""
-    id: str
-    filename: str
-    upload_date: str
-    status: str
-    page_count: Optional[int] = None
-    word_count: Optional[int] = None
+# Initialize RAG service
+rag_service = RAGService()
 
 # Health check endpoint
 @app.get("/")
@@ -84,14 +44,31 @@ async def root():
     """Health check endpoint"""
     return {"message": "RAG Document Assistant API is running"}
 
-@app.get("/health")
+@app.get("/health", response_model=HealthCheckResponse)
 async def health_check():
-    """Detailed health check"""
-    return {
-        "status": "healthy",
-        "service": "RAG Document Assistant",
-        "version": "1.0.0"
-    }
+    """Detailed health check with connection status"""
+    try:
+        # Test database connection
+        db_connected = await test_database_connection()
+        
+        # Test OpenAI connection
+        openai_connected = await rag_service.openai_client.test_connection()
+        
+        return HealthCheckResponse(
+            status="healthy",
+            service="RAG Document Assistant",
+            version="1.0.0",
+            database_connected=db_connected,
+            timestamp=datetime.utcnow()
+        )
+    except Exception as e:
+        return HealthCheckResponse(
+            status="unhealthy",
+            service="RAG Document Assistant",
+            version="1.0.0",
+            database_connected=False,
+            timestamp=datetime.utcnow()
+        )
 
 # Document management endpoints
 @app.post("/api/documents/upload", response_model=DocumentUploadResponse)
@@ -99,90 +76,24 @@ async def upload_document(file: UploadFile = File(...)):
     """
     Upload and process a document for RAG
     
-    IMPLEMENTATION STEPS:
-    1. VALIDATE FILE TYPE AND SIZE
-       - Check file.content_type against allowed types
-       - Validate file size (e.g., max 10MB)
-       - Check file extension matches content type
-    
-    2. SAVE FILE TO STORAGE
-       - Create unique filename with UUID
-       - Save to local storage or Supabase Storage
-       - Store file path for later retrieval
-    
-    3. EXTRACT TEXT CONTENT
-       - Use PyPDF2 for PDF files
-       - Use python-docx for DOCX files
-       - Handle plain text files directly
-       - Extract metadata (title, author, page count)
-    
-    4. CHUNK TEXT INTELLIGENTLY
-       - Split text into 1000-1500 character chunks
-       - Use sentence boundaries for natural splits
-       - Add 100-200 character overlap between chunks
-       - Preserve paragraph structure when possible
-    
-    5. GENERATE EMBEDDINGS
-       - Use OpenAI text-embedding-3-small model
-       - Process chunks in batches to manage API limits
-       - Handle rate limiting with exponential backoff
-       - Store embeddings as vectors in database
-    
-    6. STORE IN DATABASE
-       - Save document metadata to documents table
-       - Store chunks with embeddings in document_chunks table
-       - Create relationships between document and chunks
-       - Set up proper indexing for vector search
-    
-    EXAMPLE IMPLEMENTATION STRUCTURE:
-    ```python
-    # Validate file
-    if not validate_file(file):
-        raise HTTPException(400, "Invalid file")
-    
-    # Save file
-    file_path = await save_file(file)
-    
-    # Extract text
-    text_content = extract_text(file_path, file.content_type)
-    
-    # Chunk text
-    chunks = chunk_text(text_content)
-    
-    # Generate embeddings
-    embeddings = await generate_embeddings(chunks)
-    
-    # Store in database
-    doc_id = await store_document(file.filename, file_path, chunks, embeddings)
-    
-    return DocumentUploadResponse(document_id=doc_id, ...)
-    ```
+    This endpoint:
+    1. Validates the uploaded file
+    2. Extracts text content
+    3. Chunks the text intelligently
+    4. Generates embeddings
+    5. Stores everything in the database
     """
     try:
-        # Placeholder implementation
-        # TODO: Replace with actual document processing logic
-        
-        # Validate file type
-        allowed_types = ["application/pdf", "application/vnd.openxmlformats-officedocument.wordprocessingml.document", "text/plain"]
-        if file.content_type not in allowed_types:
-            raise HTTPException(status_code=400, detail="Unsupported file type")
-        
-        # TODO: Process the document
-        # document_processor = DocumentProcessor()
-        # processed_doc = await document_processor.process(file)
-        
-        # TODO: Store embeddings in vector database
-        # vector_store = VectorStore()
-        # await vector_store.store_document(processed_doc)
-        
-        # TODO: Save metadata to database
-        # document_record = await save_document_metadata(processed_doc)
+        # Process document through RAG pipeline
+        result = await rag_service.process_document(file)
         
         return DocumentUploadResponse(
-            document_id="temp_id_123",
-            filename=file.filename,
-            status="processed",
-            message="Document uploaded and processed successfully"
+            document_id=result["document_id"],
+            filename=result["filename"],
+            status=result["status"],
+            message="Document uploaded and processed successfully",
+            file_size=result["file_size"],
+            word_count=result["word_count"]
         )
         
     except Exception as e:
@@ -229,39 +140,29 @@ async def chat_with_documents(request: ChatRequest):
     """
     Chat with documents using RAG
     
-    TODO: Implement RAG pipeline:
-    1. Embed the user question
-    2. Search vector database for relevant chunks
-    3. Construct context with retrieved documents
-    4. Generate response using LLM
-    5. Return response with sources
+    This endpoint:
+    1. Embeds the user query
+    2. Searches for similar document chunks
+    3. Generates a response using the retrieved context
+    4. Saves the conversation if a conversation_id is provided
     """
     try:
-        # TODO: Implement RAG service
-        # rag_service = RAGService()
-        # response = await rag_service.generate_response(
-        #     query=request.message,
-        #     document_ids=request.document_ids,
-        #     conversation_id=request.conversation_id
-        # )
+        # Process chat through RAG service
+        result = await rag_service.chat_with_documents(
+            user_message=request.message,
+            document_ids=request.document_ids,
+            conversation_id=request.conversation_id
+        )
         
-        # Placeholder response
         return ChatResponse(
-            response="This is a placeholder response. TODO: Implement RAG pipeline to generate actual responses based on document content.",
-            sources=[
-                {
-                    "document_id": "doc_1",
-                    "filename": "sample_document.pdf",
-                    "page": 1,
-                    "chunk_text": "Relevant text chunk from the document...",
-                    "relevance_score": 0.85
-                }
-            ],
-            conversation_id=request.conversation_id or "new_conversation_123"
+            response=result["response"],
+            sources=result["sources"],
+            conversation_id=result["conversation_id"],
+            message_id=result["message_id"]
         )
         
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error generating response: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error in chat: {str(e)}")
 
 @app.get("/api/conversations/{conversation_id}")
 async def get_conversation_history(conversation_id: str):

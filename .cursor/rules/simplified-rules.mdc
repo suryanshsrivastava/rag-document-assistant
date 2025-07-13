@@ -1,0 +1,50 @@
+---
+description:
+globs:
+alwaysApply: true
+---
+
+## 📝 **CURSOR RULES FOR .cursorrules**
+
+```
+# RAG System Development Rules
+
+## Architecture
+- Backend: FastAPI + Supabase + OpenAI
+- Frontend: Next.js + TypeScript + Tailwind
+- Focus on working functionality over perfect code
+
+## Backend Patterns
+- Use async/await for all I/O operations
+- Implement proper error handling with try/catch blocks
+- Use Pydantic models for request/response validation
+- Follow dependency injection pattern for services
+- Use logging for debugging and monitoring
+
+## Frontend Patterns
+- Use TypeScript with strict typing
+- Implement React hooks for state management
+- Use Tailwind CSS for styling
+- Follow component composition pattern
+- Implement loading states and error boundaries
+
+## Database Patterns
+- Use Supabase for PostgreSQL + vector storage
+- Implement proper indexing for vector search
+- Use UUIDs for all primary keys
+- Follow ACID principles for data integrity
+
+## Implementation Priority
+1. Start with backend foundation (database, document processing, embeddings)
+2. Build core RAG pipeline (chunking, vector search, response generation)
+3. Create frontend components (upload, chat interface)
+4. Integrate frontend with backend
+5. Add error handling and polish
+
+## Testing Strategy
+- Test each component as you build it
+- Use console.log for debugging
+- Test API endpoints with curl/Postman
+- Test frontend with browser dev tools
+```
+

@@ -32,7 +32,7 @@ class GeminiClient:
         self.embedding_model = "models/embedding-001"  # Gemini embedding model
         self.chat_model = "gemini-1.5-flash"  # Use stable model
         
-        logger.info("Gemini client initialized successfully")
+        logger.info("Gemini client initialized")
     
     async def generate_embeddings(self, texts: List[str]) -> List[List[float]]:
         """
@@ -200,9 +200,13 @@ class GeminiClient:
             True if connection is successful, False otherwise
         """
         try:
-            # Simple test with a short text
-            test_embeddings = await self.generate_embeddings(["test"])
-            return len(test_embeddings) > 0
+            # Simple test by generating a small embedding
+            test_text = "test"
+            result = genai.embed_content(
+                model=self.embedding_model,
+                content=test_text
+            )
+            return True
         except Exception as e:
             logger.error(f"Gemini connection test failed: {str(e)}")
             return False 

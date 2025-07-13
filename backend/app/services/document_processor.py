@@ -172,7 +172,7 @@ class DocumentProcessor:
                 content = file.file.read()
                 buffer.write(content)
             
-            logger.info(f"File saved successfully: {file_path}")
+            logger.info(f"File saved: {file_path}")
             return file_path
             
         except Exception as e:

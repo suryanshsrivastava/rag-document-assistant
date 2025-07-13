@@ -97,4 +97,5 @@ class HealthCheckResponse(BaseModel):
     service: str
     version: str
     database_connected: bool
+    gemini_connected: Optional[bool] = Field(None, description="Gemini API connection status")
     timestamp: datetime = Field(default_factory=datetime.utcnow) 

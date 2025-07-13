@@ -29,7 +29,7 @@ class OpenAIClient:
         self.embedding_model = "text-embedding-3-small"
         self.chat_model = "gpt-4"
         
-        logger.info("OpenAI client initialized successfully")
+        logger.info("OpenAI client initialized")
     
     async def generate_embeddings(self, texts: List[str]) -> List[List[float]]:
         """
@@ -106,7 +106,7 @@ class OpenAIClient:
             )
             
             response_text = response.choices[0].message.content
-            logger.info("Generated chat completion successfully")
+            logger.info("Generated chat completion")
             
             return response_text
             

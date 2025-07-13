@@ -6,6 +6,7 @@ from typing import List, Optional
 import os
 from dotenv import load_dotenv
 from datetime import datetime
+import logging
 
 # Import implemented services
 from .services.rag_service import RAGService
@@ -14,7 +15,7 @@ from .services.vector_store import VectorStore
 from .services.gemini_client import GeminiClient
 from .services.chunking_service import ChunkingService
 from .database.models import Document, DocumentUploadResponse, ChatRequest, ChatResponse, DocumentInfo, HealthCheckResponse
-from .database.connection import get_supabase_client, test_database_connection
+from .database.connection import get_supabase_client, test_database_connection, is_database_available
 
 # Load environment variables
 load_dotenv()
@@ -35,8 +36,12 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Initialize RAG service
+# Initialize RAG service with lazy loading
 rag_service = RAGService()
+
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 # Health check endpoint
 @app.get("/")
@@ -51,14 +56,28 @@ async def health_check():
         # Test database connection
         db_connected = await test_database_connection()
         
-        # Test Gemini connection
-        gemini_connected = await rag_service.gemini_client.test_connection()
+        # Test Gemini connection (only if service is initialized)
+        gemini_connected = False
+        try:
+            if rag_service._initialized:
+                gemini_connected = await rag_service.gemini_client.test_connection()
+            else:
+                # Try to initialize just the Gemini client for testing
+                gemini_client = GeminiClient()
+                gemini_connected = await gemini_client.test_connection()
+        except Exception as e:
+            logger.error(f"Gemini connection test failed: {str(e)}")
+            gemini_connected = False
+        
+        # Determine overall status
+        status = "healthy" if db_connected else "unhealthy"
         
         return HealthCheckResponse(
-            status="healthy",
+            status=status,
             service="RAG Document Assistant",
             version="1.0.0",
             database_connected=db_connected,
+            gemini_connected=gemini_connected,
             timestamp=datetime.utcnow()
         )
     except Exception as e:
@@ -67,6 +86,7 @@ async def health_check():
             service="RAG Document Assistant",
             version="1.0.0",
             database_connected=False,
+            gemini_connected=False,
             timestamp=datetime.utcnow()
         )
 
@@ -184,7 +204,7 @@ async def get_conversation_history(conversation_id: str):
                 "role": "assistant",
                 "content": "Sample response",
                 "sources": [],
-                "timestamp": "2024-01-01T00:00:01Z"
+                "timestamp": "2024-01-01T00:01:00Z"
             }
         ]
     }

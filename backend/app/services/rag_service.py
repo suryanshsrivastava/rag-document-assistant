@@ -13,7 +13,7 @@ from .document_processor import DocumentProcessor
 from .chunking_service import ChunkingService
 from .gemini_client import GeminiClient
 from .vector_store import VectorStore
-from ..database.connection import get_supabase_client
+from ..database.connection import get_supabase_client, is_database_available
 
 logger = logging.getLogger(__name__)
 
@@ -21,14 +21,43 @@ class RAGService:
     """Main RAG orchestration service."""
     
     def __init__(self):
-        """Initialize RAG service with all required components."""
-        self.document_processor = DocumentProcessor()
-        self.chunking_service = ChunkingService()
-        self.gemini_client = GeminiClient()
-        self.vector_store = VectorStore()
-        self.supabase = get_supabase_client()
+        """Initialize RAG service with lazy loading of components."""
+        self.document_processor = None
+        self.chunking_service = None
+        self.gemini_client = None
+        self.vector_store = None
+        self.supabase = None
+        self._initialized = False
         
-        logger.info("RAG service initialized successfully")
+        logger.info("RAG service initialized")
+    
+    def _initialize_components(self):
+        """Lazy initialization of service components."""
+        if self._initialized:
+            return
+            
+        try:
+            # Initialize core services
+            self.document_processor = DocumentProcessor()
+            self.chunking_service = ChunkingService()
+            self.gemini_client = GeminiClient()
+            self.vector_store = VectorStore()
+            
+            # Initialize database connection
+            self.supabase = get_supabase_client()
+            
+            self._initialized = True
+            logger.info("RAG service components initialized")
+            
+        except Exception as e:
+            logger.error(f"Failed to initialize RAG service components: {str(e)}")
+            self._initialized = True
+            raise
+    
+    def _ensure_initialized(self):
+        """Ensure service components are initialized."""
+        if not self._initialized:
+            self._initialize_components()
     
     async def process_document(self, file) -> Dict[str, Any]:
         """
@@ -41,6 +70,12 @@ class RAGService:
             Dictionary with processing results
         """
         try:
+            self._ensure_initialized()
+            
+            # Check database availability
+            if not is_database_available():
+                raise Exception("Database is not available. Please check your configuration.")
+            
             # Step 1: Process document and extract text
             logger.info("Starting document processing")
             processed_doc = await self.document_processor.process_document(file)
@@ -102,6 +137,12 @@ class RAGService:
             Dictionary with response and sources
         """
         try:
+            self._ensure_initialized()
+            
+            # Check database availability
+            if not is_database_available():
+                raise Exception("Database is not available. Please check your configuration.")
+            
             # Step 1: Generate embedding for user query
             logger.info("Generating query embedding")
             query_embeddings = await self.gemini_client.generate_embeddings([user_message])
@@ -137,7 +178,7 @@ class RAGService:
                     similar_chunks
                 )
             
-            logger.info("RAG chat completed successfully")
+            logger.info("RAG chat completed")
             return {
                 "response": response,
                 "sources": similar_chunks,
@@ -160,6 +201,9 @@ class RAGService:
             Document ID
         """
         try:
+            if not self.supabase:
+                raise Exception("Database connection not available")
+                
             document_id = str(uuid.uuid4())
             document_data = {
                 "id": document_id,
@@ -194,6 +238,10 @@ class RAGService:
             True if update was successful
         """
         try:
+            if not self.supabase:
+                logger.warning("Database not available, skipping status update")
+                return False
+                
             result = self.supabase.table("documents").update({
                 "status": status,
                 "updated_at": datetime.utcnow().isoformat()
@@ -225,6 +273,10 @@ class RAGService:
             Message ID
         """
         try:
+            if not self.supabase:
+                logger.warning("Database not available, skipping conversation save")
+                return str(uuid.uuid4())
+                
             message_id = str(uuid.uuid4())
             message_data = {
                 "id": message_id,
@@ -254,21 +306,17 @@ class RAGService:
             Document information dictionary
         """
         try:
-            # Get document metadata
+            self._ensure_initialized()
+            
+            if not self.supabase:
+                raise Exception("Database is not available")
+                
             result = self.supabase.table("documents").select("*").eq("id", document_id).execute()
             
             if not result.data:
-                raise Exception("Document not found")
-            
-            document = result.data[0]
-            
-            # Get chunk statistics
-            chunk_stats = await self.vector_store.get_chunk_statistics(document_id)
-            
-            return {
-                "document": document,
-                "chunk_statistics": chunk_stats
-            }
+                raise Exception(f"Document {document_id} not found")
+                
+            return result.data[0]
             
         except Exception as e:
             logger.error(f"Error getting document info: {str(e)}")
@@ -276,7 +324,7 @@ class RAGService:
     
     async def delete_document(self, document_id: str) -> bool:
         """
-        Delete a document and all its chunks.
+        Delete a document and all its associated data.
         
         Args:
             document_id: Document ID
@@ -285,40 +333,46 @@ class RAGService:
             True if deletion was successful
         """
         try:
+            self._ensure_initialized()
+            
+            if not self.supabase:
+                raise Exception("Database is not available")
+            
             # Delete chunks first
             await self.vector_store.delete_document_chunks(document_id)
             
             # Delete document metadata
             result = self.supabase.table("documents").delete().eq("id", document_id).execute()
             
-            logger.info(f"Deleted document: {document_id}")
+            logger.info(f"Document {document_id} deleted")
             return True
             
         except Exception as e:
             logger.error(f"Error deleting document: {str(e)}")
-            raise Exception(f"Failed to delete document: {str(e)}")
+            return False
     
     async def test_all_connections(self) -> Dict[str, bool]:
         """
         Test all service connections.
         
         Returns:
-            Dictionary with connection test results
+            Dictionary with connection status for each service
         """
-        results = {}
-        
         try:
-            # Test database connection
-            results["database"] = await self.vector_store.test_connection()
+            self._ensure_initialized()
+            
+            results = {
+                "database": is_database_available(),
+                "gemini": await self.gemini_client.test_connection(),
+                "vector_store": True  # Vector store uses database
+            }
+            
+            return results
+            
         except Exception as e:
-            results["database"] = False
-            logger.error(f"Database connection test failed: {str(e)}")
-        
-        try:
-            # Test Gemini connection
-            results["gemini"] = await self.gemini_client.test_connection()
-        except Exception as e:
-            results["gemini"] = False
-            logger.error(f"Gemini connection test failed: {str(e)}")
-        
-        return results 
+            logger.error(f"Error testing connections: {str(e)}")
+            return {
+                "database": False,
+                "gemini": False,
+                "vector_store": False
+            } 

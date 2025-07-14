@@ -22,6 +22,7 @@ class DatabaseConnection:
     def __init__(self):
         """Initialize database connection with environment variables."""
         self.supabase_url = os.getenv("SUPABASE_URL")
+        # Use anonymous key with RLS policies for anonymous access
         self.supabase_key = os.getenv("SUPABASE_ANON_KEY")
         self.client: Optional[Client] = None
         self._initialized = False

@@ -123,36 +123,32 @@ async def upload_document(file: UploadFile = File(...)):
 async def list_documents():
     """
     List all uploaded documents
-    
-    TODO: Implement database query to fetch all documents
     """
-    # TODO: Query database for documents
-    # documents = await get_all_documents()
-    
-    # Placeholder response
-    return [
-        DocumentInfo(
-            id="doc_1",
-            filename="sample_document.pdf",
-            upload_date="2024-01-01T00:00:00Z",
-            status="processed",
-            page_count=10,
-            word_count=2500
-        )
-    ]
+    try:
+        # Get documents from RAG service
+        documents = await rag_service.get_all_documents()
+        return documents
+    except Exception as e:
+        logger.error(f"Error listing documents: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error listing documents: {str(e)}")
 
 @app.delete("/api/documents/{document_id}")
 async def delete_document(document_id: str):
     """
     Delete a document and its embeddings
-    
-    TODO: Implement document deletion
-    1. Remove from vector database
-    2. Delete file from storage
-    3. Remove metadata from database
     """
-    # TODO: Implement deletion logic
-    return {"message": f"Document {document_id} deleted successfully"}
+    try:
+        # Delete document through RAG service
+        success = await rag_service.delete_document(document_id)
+        
+        if success:
+            return {"message": f"Document {document_id} deleted successfully"}
+        else:
+            raise HTTPException(status_code=404, detail=f"Document {document_id} not found or could not be deleted")
+            
+    except Exception as e:
+        logger.error(f"Error deleting document: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error deleting document: {str(e)}")
 
 # Chat and RAG endpoints
 @app.post("/api/chat", response_model=ChatResponse)
@@ -188,48 +184,18 @@ async def chat_with_documents(request: ChatRequest):
 async def get_conversation_history(conversation_id: str):
     """
     Get conversation history
-    
-    TODO: Implement conversation history retrieval
     """
-    # TODO: Query database for conversation history
-    return {
-        "conversation_id": conversation_id,
-        "messages": [
-            {
-                "role": "user",
-                "content": "Sample question",
-                "timestamp": "2024-01-01T00:00:00Z"
-            },
-            {
-                "role": "assistant",
-                "content": "Sample response",
-                "sources": [],
-                "timestamp": "2024-01-01T00:01:00Z"
-            }
-        ]
-    }
+    # Not implemented yet
+    raise HTTPException(status_code=501, detail="Conversation history retrieval is not implemented yet.")
 
 # Search endpoints
 @app.get("/api/search")
 async def search_documents(query: str, document_ids: Optional[str] = None):
     """
     Search across documents without generating a conversational response
-    
-    TODO: Implement semantic search
     """
-    # TODO: Implement search functionality
-    return {
-        "query": query,
-        "results": [
-            {
-                "document_id": "doc_1",
-                "filename": "sample_document.pdf",
-                "chunk_text": "Relevant text containing the search terms...",
-                "relevance_score": 0.92,
-                "page": 1
-            }
-        ]
-    }
+    # Not implemented yet
+    raise HTTPException(status_code=501, detail="Semantic search is not implemented yet.")
 
 if __name__ == "__main__":
     import uvicorn

@@ -13,13 +13,12 @@ from uuid import UUID
 class Document(BaseModel):
     """Document model for database storage."""
     id: str = Field(..., description="Unique document identifier")
-    filename: str = Field(..., description="Original filename")
+    user_id: str = Field(..., description="User who uploaded the document")
+    title: str = Field(..., description="Document title")
+    content: str = Field(..., description="Document content")
     file_path: str = Field(..., description="Path to stored file")
-    content_type: str = Field(..., description="MIME type of the file")
+    file_type: str = Field(..., description="Type of the file")
     file_size: int = Field(..., description="File size in bytes")
-    page_count: Optional[int] = Field(None, description="Number of pages")
-    word_count: Optional[int] = Field(None, description="Number of words")
-    status: str = Field(default="processing", description="Processing status")
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
 

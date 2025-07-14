@@ -23,7 +23,7 @@ backend/
 │   └── services/
 │       ├── document_processor.py  # File processing and text extraction
 │       ├── chunking_service.py    # Text chunking with overlap
-│       ├── openai_client.py       # OpenAI API integration
+│       ├── gemini_client.py       # Google Gemini API integration
 │       ├── vector_store.py        # Vector storage and similarity search
 │       └── rag_service.py         # Main RAG orchestration
 ├── requirements.txt            # Python dependencies
@@ -80,7 +80,7 @@ CREATE TABLE document_chunks (
     document_id UUID REFERENCES documents(id) ON DELETE CASCADE,
     chunk_text TEXT NOT NULL,
     chunk_index INTEGER NOT NULL,
-    embedding VECTOR(1536), -- OpenAI text-embedding-3-small dimension
+    embedding VECTOR(1536), -- Gemini embedding-001 dimension (updated to 1536)
     metadata JSONB DEFAULT '{}',
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
@@ -182,7 +182,7 @@ This will test:
 - Text chunking functionality
 - Document validation
 - Database connection (if configured)
-- OpenAI client (if API key provided)
+- Gemini client (if API key provided)
 
 ## 📝 Environment Variables
 

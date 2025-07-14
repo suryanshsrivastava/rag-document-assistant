@@ -7,10 +7,10 @@ Handles Google Gemini API interactions for embeddings and chat completions.
 import os
 import asyncio
 from typing import List, Dict, Any, Optional
-import google.generativeai as genai
+import google.genai as genai
 from dotenv import load_dotenv
 import logging
-
+from .constants import GEMINI_EMBEDDING_MODEL, GEMINI_EMBEDDING_DIM, GEMINI_CHAT_MODEL, GENERATION_TEMPERATURE, MAX_OUTPUT_TOKENS, STOP_SEQUENCES
 # Load environment variables
 load_dotenv()
 
@@ -18,6 +18,7 @@ logger = logging.getLogger(__name__)
 
 class GeminiClient:
     """Service for Google Gemini API interactions."""
+    EMBEDDING_DIM = GEMINI_EMBEDDING_DIM  # Use constant
     
     def __init__(self):
         """Initialize Gemini client with API key."""
@@ -26,13 +27,13 @@ class GeminiClient:
             raise ValueError("GEMINI_API_KEY environment variable is required")
         
         # Configure Gemini
-        genai.configure(api_key=self.api_key)
+        self.client = genai.Client(api_key=self.api_key)
         
         # Initialize models
-        self.embedding_model = "models/embedding-001"  # Gemini embedding model
-        self.chat_model = "gemini-1.5-flash"  # Use stable model
+        self.embedding_model = GEMINI_EMBEDDING_MODEL  # Use constant
+        self.chat_model = GEMINI_CHAT_MODEL  # Use constant
         
-        logger.info("Gemini client initialized")
+        logger.info(f"Gemini client initialized for {self.EMBEDDING_DIM}-dim embeddings")
     
     async def generate_embeddings(self, texts: List[str]) -> List[List[float]]:
         """
@@ -57,11 +58,12 @@ class GeminiClient:
                 
                 for text in batch:
                     # Use the correct API call for embedding generation
-                    result = genai.embed_content(
+                    result = self.client.models.embed_content(
                         model=self.embedding_model,
-                        content=text
+                        contents=text,
+                        config={'output_dimensionality': 1536},
                     )
-                    batch_embeddings.append(result['embedding'])
+                    batch_embeddings.append(result.embeddings[0].values)
                 
                 embeddings.extend(batch_embeddings)
                 
@@ -69,6 +71,8 @@ class GeminiClient:
                 if i + batch_size < len(texts):
                     await asyncio.sleep(0.1)
             
+            if embeddings:
+                logger.info(f"Embedding length: {len(embeddings[0])}")
             logger.info(f"Generated embeddings for {len(texts)} texts")
             return embeddings
             
@@ -80,7 +84,9 @@ class GeminiClient:
         self, 
         messages: List[Dict[str, str]], 
         context: Optional[str] = None,
-        temperature: float = 0.7
+        temperature: float = GENERATION_TEMPERATURE,
+        max_output_tokens: int = MAX_OUTPUT_TOKENS,
+        stop_sequences: list = STOP_SEQUENCES
     ) -> str:
         """
         Generate chat completion with optional context.
@@ -95,27 +101,47 @@ class GeminiClient:
         """
         try:
             # Initialize Gemini model
-            model = genai.GenerativeModel(self.chat_model)
-            
-            # Prepare conversation history
-            conversation = model.start_chat(history=[])
+            chat = self.client.chats.create(
+                model=self.chat_model,
+                config={
+                    "temperature": temperature,
+                    "max_output_tokens": max_output_tokens,
+                    "stop_sequences": stop_sequences
+                },
+                history=[]
+            )
+        
             
             # Add context if provided
             if context:
                 system_message = f"You are a helpful AI assistant. Use the following context to answer questions: {context}"
                 # Add system message to conversation
-                conversation.send_message(system_message)
+                chat.send_message(system_message)
             
             # Add user messages
             for message in messages:
                 if message["role"] == "user":
-                    response = conversation.send_message(message["content"])
+                    response = chat.send_message(
+                        message["content"],
+                        config={
+                            "temperature": temperature,
+                            "max_output_tokens": max_output_tokens,
+                            "stop_sequences": stop_sequences
+                        }
+                    )
                     return response.text
             
             # If no user message found, use the last message
             if messages:
                 last_message = messages[-1]["content"]
-                response = conversation.send_message(last_message)
+                response = chat.send_message(
+                    last_message,
+                    config={
+                        "temperature": temperature,
+                        "max_output_tokens": max_output_tokens,
+                        "stop_sequences": stop_sequences
+                    }
+                )
                 return response.text
             
             return "No message provided"
@@ -160,7 +186,9 @@ class GeminiClient:
             response = await self.generate_chat_completion(
                 messages=messages,
                 context=context_text,
-                temperature=0.7
+                temperature=GENERATION_TEMPERATURE,
+                max_output_tokens=MAX_OUTPUT_TOKENS,
+                stop_sequences=STOP_SEQUENCES
             )
             
             return response
@@ -210,3 +238,15 @@ class GeminiClient:
         except Exception as e:
             logger.error(f"Gemini connection test failed: {str(e)}")
             return False 
+
+# Test function to check embedding dimension
+async def test_embedding_dimension():
+    genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
+    test_text = "test embedding dimension"
+    result = genai.embed_content(
+        model=GEMINI_EMBEDDING_MODEL,
+        content=test_text
+    )
+    embedding = result['embedding']
+    print(f"Test embedding length: {len(embedding)}")
+    return len(embedding) 

@@ -10,7 +10,7 @@ alwaysApply: true
 # RAG System Development Rules
 
 ## Architecture
-- Backend: FastAPI + Supabase + OpenAI
+- Backend: FastAPI + Supabase + Google Gemini
 - Frontend: Next.js + TypeScript + Tailwind
 - Focus on working functionality over perfect code
 
@@ -20,6 +20,7 @@ alwaysApply: true
 - Use Pydantic models for request/response validation
 - Follow dependency injection pattern for services
 - Use logging for debugging and monitoring
+- Use separate constants file for these magic numbers for best practice
 
 ## Frontend Patterns
 - Use TypeScript with strict typing

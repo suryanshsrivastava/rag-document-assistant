@@ -43,7 +43,7 @@ alwaysApply: false
 1. **Database connection** with Supabase
 2. **Document processing** (PDF, DOCX, TXT)
 3. **Text chunking** with overlap
-4. **Embedding generation** using OpenAI
+4. **Embedding generation** using Google Gemini
 5. **Vector storage** and similarity search
 6. **Chat interface** with RAG responses
 7. **Error handling** throughout the stack

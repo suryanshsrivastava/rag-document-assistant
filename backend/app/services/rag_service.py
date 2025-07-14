@@ -91,6 +91,8 @@ class RAGService:
             logger.info("Generating embeddings")
             chunk_texts = [chunk["chunk_text"] for chunk in chunks]
             embeddings = await self.gemini_client.generate_embeddings(chunk_texts)
+            if embeddings:
+                logger.info(f"Embedding length: {len(embeddings[0])}")
             
             # Step 4: Store document metadata
             logger.info("Storing document metadata")
@@ -166,6 +168,16 @@ class RAGService:
             
             # Step 4: Save conversation if needed
             if conversation_id:
+                # Validate or convert `conversation_id` to UUID
+                try:
+                    conversation_id = str(uuid.UUID(conversation_id))
+                except ValueError:
+                    logger.warning(f"Invalid conversation_id format received: {conversation_id}. Generating new UUID.")
+                    conversation_id = str(uuid.uuid4())
+                
+                # Ensure conversation exists
+                await self._ensure_conversation_exists(conversation_id)
+                
                 await self._save_conversation_message(
                     conversation_id, 
                     "user", 
@@ -177,6 +189,10 @@ class RAGService:
                     response,
                     similar_chunks
                 )
+            else:
+                # Generate a new conversation ID if none provided
+                conversation_id = str(uuid.uuid4())
+                await self._ensure_conversation_exists(conversation_id)
             
             logger.info("RAG chat completed")
             return {
@@ -207,13 +223,12 @@ class RAGService:
             document_id = str(uuid.uuid4())
             document_data = {
                 "id": document_id,
-                "filename": processed_doc["filename"],
+                "user_id": "00000000-0000-0000-0000-000000000000",  # Anonymous user for testing
+                "title": processed_doc.get("title") or processed_doc.get("filename") or "Untitled Document",
+                "content": processed_doc.get("text_content", ""),
                 "file_path": processed_doc["file_path"],
-                "content_type": processed_doc["metadata"]["content_type"],
+                "file_type": processed_doc["metadata"].get("content_type", "unknown"),
                 "file_size": processed_doc["metadata"]["file_size"],
-                "page_count": processed_doc["metadata"].get("page_count"),
-                "word_count": processed_doc["metadata"].get("word_count"),
-                "status": "processing",
                 "created_at": datetime.utcnow().isoformat(),
                 "updated_at": datetime.utcnow().isoformat()
             }
@@ -281,6 +296,7 @@ class RAGService:
             message_data = {
                 "id": message_id,
                 "conversation_id": conversation_id,
+                "user_id": "00000000-0000-0000-0000-000000000000",
                 "role": role,
                 "content": content,
                 "sources": sources or [],
@@ -294,6 +310,24 @@ class RAGService:
         except Exception as e:
             logger.error(f"Error saving conversation message: {str(e)}")
             raise Exception(f"Failed to save conversation message: {str(e)}")
+    
+    async def _ensure_conversation_exists(self, conversation_id: str) -> None:
+        """
+        Ensure a conversation with the given ID exists in the conversations table.
+        If not, insert a new conversation row.
+        """
+        if not self.supabase:
+            logger.warning("Database not available, skipping conversation existence check")
+            return
+        result = self.supabase.table("conversations").select("id").eq("id", conversation_id).execute()
+        if not result.data:
+            # Insert new conversation
+            self.supabase.table("conversations").insert({
+                "id": conversation_id,
+                "title": "Chat Session",
+                "created_at": datetime.utcnow().isoformat(),
+                "updated_at": datetime.utcnow().isoformat()
+            }).execute()
     
     async def get_document_info(self, document_id: str) -> Dict[str, Any]:
         """
@@ -350,6 +384,39 @@ class RAGService:
         except Exception as e:
             logger.error(f"Error deleting document: {str(e)}")
             return False
+    
+    async def get_all_documents(self) -> List[Dict[str, Any]]:
+        """
+        Get all documents from the database.
+        
+        Returns:
+            List of document information dictionaries
+        """
+        try:
+            self._ensure_initialized()
+            
+            if not self.supabase:
+                raise Exception("Database is not available")
+                
+            result = self.supabase.table("documents").select("*").order("created_at", desc=True).execute()
+            
+            documents = []
+            for doc in result.data:
+                documents.append({
+                    "id": doc["id"],
+                    "filename": doc["filename"],
+                    "upload_date": doc["created_at"],
+                    "status": doc["status"],
+                    "page_count": doc.get("page_count"),
+                    "word_count": doc.get("word_count"),
+                    "file_size": doc.get("file_size", 0)
+                })
+            
+            return documents
+            
+        except Exception as e:
+            logger.error(f"Error getting all documents: {str(e)}")
+            raise Exception(f"Failed to get documents: {str(e)}")
     
     async def test_all_connections(self) -> Dict[str, bool]:
         """

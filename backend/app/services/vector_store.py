@@ -9,6 +9,7 @@ from typing import List, Dict, Any, Optional
 from datetime import datetime
 import logging
 from ..database.connection import get_supabase_client
+from .constants import N_RESULTS, MINIMUM_SCORE
 
 logger = logging.getLogger(__name__)
 
@@ -43,7 +44,7 @@ class VectorStore:
                 chunk_record = {
                     "id": str(uuid.uuid4()),
                     "document_id": document_id,
-                    "chunk_text": chunk["chunk_text"],
+                    "content": chunk["chunk_text"],  # Use 'content' for DB, keep 'chunk_text' in code
                     "chunk_index": chunk["chunk_index"],
                     "embedding": embedding,
                     "metadata": chunk.get("metadata", {}),
@@ -65,8 +66,8 @@ class VectorStore:
         self, 
         query_embedding: List[float], 
         document_ids: Optional[List[str]] = None,
-        limit: int = 5,
-        similarity_threshold: float = 0.7
+        limit: int = N_RESULTS,
+        similarity_threshold: float = MINIMUM_SCORE
     ) -> List[Dict[str, Any]]:
         """
         Search for similar chunks using vector similarity.
@@ -83,19 +84,17 @@ class VectorStore:
         try:
             # Build query
             query = self.supabase.table("document_chunks").select(
-                "id, document_id, chunk_text, chunk_index, metadata, embedding"
+                "id, document_id, content, chunk_index, metadata, embedding"
             )
             
             # Filter by document IDs if provided
             if document_ids:
                 query = query.in_("document_id", document_ids)
             
-            # Perform vector similarity search
-            # Note: This assumes Supabase has pgvector extension enabled
-            # The exact syntax may vary based on your Supabase setup
-            result = query.order(
-                f"embedding <-> '{query_embedding}'::vector"
-            ).limit(limit).execute()
+            # Supabase/PostgREST does not support raw Postgres vector operators in the query builder.
+            # To do true vector search, you need to use an RPC or custom SQL function, or fetch all embeddings and compute similarity in Python.
+            # For now, just return the first N chunks (no similarity ordering).
+            result = query.limit(limit).execute()
             
             # Process results
             similar_chunks = []
@@ -103,7 +102,7 @@ class VectorStore:
                 chunk_data = {
                     "chunk_id": row["id"],
                     "document_id": row["document_id"],
-                    "chunk_text": row["chunk_text"],
+                    "chunk_text": row["content"],  # Use 'chunk_text' in code, 'content' in DB
                     "chunk_index": row["chunk_index"],
                     "metadata": row.get("metadata", {}),
                     "similarity_score": 1.0  # Placeholder - calculate actual similarity
@@ -129,14 +128,14 @@ class VectorStore:
         """
         try:
             result = self.supabase.table("document_chunks").select(
-                "id, chunk_text, chunk_index, metadata"
+                "id, content, chunk_index, metadata"
             ).eq("document_id", document_id).order("chunk_index").execute()
             
             chunks = []
             for row in result.data:
                 chunk_data = {
                     "chunk_id": row["id"],
-                    "chunk_text": row["chunk_text"],
+                    "chunk_text": row["content"],  # Use 'chunk_text' in code, 'content' in DB
                     "chunk_index": row["chunk_index"],
                     "metadata": row.get("metadata", {})
                 }

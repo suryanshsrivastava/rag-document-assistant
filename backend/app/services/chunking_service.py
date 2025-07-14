@@ -7,13 +7,14 @@ Handles intelligent text chunking with overlap for optimal embedding generation.
 import re
 from typing import List, Dict, Any, Optional
 import logging
+from .constants import CHUNK_SIZE, CHUNK_OVERLAP
 
 logger = logging.getLogger(__name__)
 
 class ChunkingService:
     """Service for chunking text documents with intelligent splitting."""
     
-    def __init__(self, chunk_size: int = 1000, overlap_size: int = 200):
+    def __init__(self, chunk_size: int = CHUNK_SIZE, overlap_size: int = CHUNK_OVERLAP):
         """
         Initialize the chunking service.
         

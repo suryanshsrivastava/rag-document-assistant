@@ -2,30 +2,34 @@
 
 A complete Retrieval-Augmented Generation (RAG) system built with Next.js, FastAPI, and Supabase.
 
-## 🚀 Features
+## Features
 
-- **Document Upload**: Upload PDF and TXT files
+- **Document Upload**: Support for PDF, DOCX, and TXT files with drag-and-drop interface
 - **Vector Storage**: Store document embeddings in Supabase
-- **AI Chat**: Chat with your documents using OpenAI
-- **Modern UI**: Beautiful, responsive interface
+- **Intelligent Text Processing**: Automatic text extraction, chunking, and embedding generation
+- **Vector Search**: Semantic search across document chunks using embeddings
+- **AI Chat Interface**: Real-time conversations with document context using Google Gemini
+- **Source Citations**: See which documents and sections were used to generate responses
+- **Document Management**: View, select, and manage uploaded documents
+- **Modern UI**: Beautiful, responsive interface with dark mode support
 - **Real-time Processing**: Fast document processing and chunking
 
-## 🛠️ Technology Stack
+## Technology Stack
 
 - **Frontend**: Next.js 15 with TypeScript and Tailwind CSS
 - **Backend**: FastAPI with Python
 - **Database**: Supabase with PostgreSQL and pgvector
-- **AI**: OpenAI GPT-3.5-turbo and text-embedding-3-small
-- **File Processing**: PyPDF2 for PDF extraction
+- **AI**: Google Gemini for embeddings and chat completions
+- **File Processing**: PyPDF2, python-docx for document extraction
 
-## 📋 Prerequisites
+## Prerequisites
 
 - Python 3.8+
 - Node.js 18+
 - Supabase account
-- OpenAI API key
+- Google Gemini API key
 
-## 🚀 Quick Start
+## Quick Start
 
 ### 1. Clone and Setup
 
@@ -43,7 +47,7 @@ Edit `backend/.env` with your API keys:
 ```env
 SUPABASE_URL=your_supabase_url_here
 SUPABASE_KEY=your_supabase_anon_key_here
-OPENAI_API_KEY=your_openai_api_key_here
+GEMINI_API_KEY=your_gemini_api_key_here
 ```
 
 ### 3. Set up Supabase Database
@@ -77,7 +81,7 @@ npm run dev
 - **Backend API**: http://localhost:8000
 - **API Documentation**: http://localhost:8000/docs
 
-## 📁 Project Structure
+## Project Structure
 
 ```
 weekend-rag-system/
@@ -96,7 +100,7 @@ weekend-rag-system/
 └── README.md              # This file
 ```
 
-## 🔧 Development
+## Development
 
 ### Backend Development
 
@@ -202,10 +206,10 @@ If you encounter any issues:
 3. Ensure Supabase database is properly configured
 4. Check that all dependencies are installed
 
-## 🎯 Roadmap
+## Roadmap
 
 - [ ] Add authentication and user management
-- [ ] Support for more file types (DOCX, MD)
+- [ ] Support for more file types (MD, XLSX)
 - [ ] Real-time collaborative features
 - [ ] Advanced document analytics
 - [ ] Multi-language support

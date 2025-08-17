@@ -11,9 +11,9 @@ Date: Today's Date
 import os
 import uuid
 import PyPDF2
-from fastapi import UploadFile, HTTPException
 import docx
 from typing import Dict, List, Optional
+from fastapi import UploadFile, HTTPException
 import logging
 from datetime import datetime
 

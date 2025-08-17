@@ -1,0 +1,148 @@
+---
+description: ---
+# Cursor Rules for RAG All-Nighter
+
+## 🎯 **CONTEXT AWARENESS**
+- You are building a RAG document assistant in 14 hours
+- Current state: FastAPI skeleton + Next.js template
+- Goal: Complete working system with document upload, processing, and chat
+
+globs:
+alwaysApply: false
+
+
+## 🎯 **CURSOR RULES FOR OPTIMAL EXECUTION**
+
+```markdown
+
+## 🛠️ **IMPLEMENTATION PATTERNS**
+
+### **Backend Code Style**:
+- Use **async/await** for all database and API calls
+- Implement **comprehensive error handling** with try/catch
+- Use **Pydantic models** for data validation
+- Follow **service layer pattern** with dependency injection
+- Add **logging** for debugging: `logger.info()`, `logger.error()`
+
+### **Frontend Code Style**:
+- Use **TypeScript** with strict typing
+- Implement **React hooks** for state management
+- Use **Tailwind CSS** for responsive design
+- Follow **component composition** pattern
+- Add **loading states** and **error boundaries**
+
+### **Database Patterns**:
+- Use **Supabase** for PostgreSQL + vector storage
+- Use **UUIDs** for all primary keys
+- Implement **proper indexing** for vector search
+- Follow **ACID principles** for data integrity
+
+## 🚨 **CRITICAL SUCCESS FACTORS**
+
+### **Must Implement**:
+1. **Database connection** with Supabase
+2. **Document processing** (PDF, DOCX, TXT)
+3. **Text chunking** with overlap
+4. **Embedding generation** using Google Gemini
+5. **Vector storage** and similarity search
+6. **Chat interface** with RAG responses
+7. **Error handling** throughout the stack
+
+### **Implementation Order**:
+1. Backend services (document_processor, chunking, embeddings, vector_store)
+2. Database models and connection
+3. Frontend components (upload, chat, API client)
+4. Integration and testing
+5. Documentation and polish
+
+## 🎯 **CODE QUALITY STANDARDS**
+
+### **Error Handling**:
+```python
+try:
+    # Implementation
+    result = await process_document(file)
+    return result
+except ValidationError as e:
+    raise HTTPException(status_code=400, detail=str(e))
+except Exception as e:
+    logger.error(f"Error processing document: {str(e)}")
+    raise HTTPException(status_code=500, detail="Internal server error")
+Type Safety:
+interface Document {
+  id: string;
+  filename: string;
+  uploadDate: string;
+  status: 'processing' | 'completed' | 'error';
+}
+
+interface ChatMessage {
+  id: string;
+  role: 'user' | 'assistant';
+  content: string;
+  sources?: Document[];
+  timestamp: string;
+}
+API Design:
+@app.post("/api/documents/upload")
+async def upload_document(file: UploadFile = File(...)):
+    # Validate file
+    # Process document
+    # Store embeddings
+    # Return response
+
+@app.post("/api/chat")
+async def chat_with_documents(request: ChatRequest):
+    # Embed query
+    # Search vectors
+    # Generate response
+    # Return with sources
+🚀 EXECUTION GUIDELINES
+When Implementing:
+Start simple - get basic functionality working first
+Test incrementally - verify each component as you build
+Use placeholders - replace with real data later
+Focus on core features - polish comes last
+Document as you go - add comments for complex logic
+When Debugging:
+Use console.log and logger.info() for tracing
+Test API endpoints with curl/Postman
+Check browser dev tools for frontend issues
+Verify database connections and queries
+Test file uploads with different file types
+When Optimizing:
+Database indexing for vector search performance
+Batch processing for embedding generation
+Caching for frequently accessed data
+Error boundaries for frontend resilience
+Loading states for better UX
+🎯 SUCCESS METRICS
+Phase 1 Complete When:
+[ ] Can upload PDF/DOCX/TXT files
+[ ] Can extract text from uploaded files
+[ ] Can chunk text into segments
+[ ] Can generate embeddings
+[ ] Can store in database
+Phase 2 Complete When:
+[ ] Can upload files via UI
+[ ] Can see uploaded documents
+[ ] Can send chat messages
+[ ] Can see AI responses
+[ ] Can see source citations
+Phase 3 Complete When:
+[ ] Full user journey works end-to-end
+[ ] Error handling works properly
+[ ] Documentation is complete
+[ ] Code is clean and organized
+🚨 EMERGENCY PROTOCOLS
+If Running Behind Schedule:
+Skip advanced features - focus on core RAG functionality
+Simplify UI - use basic components, skip animations
+Reduce testing scope - test only critical paths
+Minimize documentation - focus on essential setup instructions
+If Components Fail:
+Use mock data for testing other components
+Implement fallbacks for critical features
+Add error boundaries to prevent cascading failures
+Log errors for post-deadline debugging
+Remember: Working functionality > Perfect code. Get the core RAG pipeline working first, then polish!

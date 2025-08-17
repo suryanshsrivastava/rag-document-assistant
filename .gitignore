@@ -1,5 +1,5 @@
 # Virtual Environment
-backend/rag-backend/
+backend/.venv/
 venv/
 __pycache__/
 *.pyc
@@ -170,3 +170,4 @@ build/
 # Vite logs files
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
+docs/

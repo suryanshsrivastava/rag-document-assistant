@@ -7,7 +7,7 @@ Handles Google Gemini API interactions for embeddings and chat completions.
 import os
 import asyncio
 from typing import List, Dict, Any, Optional
-import google.generativeai as genai
+import google.genai as genai
 from dotenv import load_dotenv
 import logging
 from .constants import GEMINI_EMBEDDING_MODEL, GEMINI_EMBEDDING_DIM, GEMINI_CHAT_MODEL, GENERATION_TEMPERATURE, MAX_OUTPUT_TOKENS, STOP_SEQUENCES

@@ -1,4 +1,5 @@
 # Virtual Environment
+backend/rag-backend/
 venv/
 __pycache__/
 *.pyc

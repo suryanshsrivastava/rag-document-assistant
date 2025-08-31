@@ -21,7 +21,7 @@ CREATE TABLE IF NOT EXISTS public.document_chunks (
     document_id UUID NOT NULL REFERENCES public.documents(id) ON DELETE CASCADE,
     chunk_index INTEGER NOT NULL,
     content TEXT NOT NULL,
-    embedding vector(1536), -- OpenAI text-embedding-3-small dimension
+    embedding vector(768), -- Google Gemini embedding-001 dimension
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 

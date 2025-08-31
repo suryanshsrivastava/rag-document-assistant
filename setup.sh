@@ -53,7 +53,7 @@ source venv/bin/activate
 # Install Python dependencies
 print_status "Installing Python dependencies..."
 pip install -r requirements.txt
-pip install PyPDF2 openai python-dotenv
+pip install PyPDF2 google-generativeai python-dotenv
 
 print_success "Python dependencies installed"
 
@@ -75,8 +75,8 @@ if [ ! -f "backend/.env" ]; then
     cp backend/.env.example backend/.env
     print_warning "Environment file created. Please update backend/.env with your API keys:"
     echo "  - SUPABASE_URL: Your Supabase project URL"
-    echo "  - SUPABASE_KEY: Your Supabase anon key"
-    echo "  - OPENAI_API_KEY: Your OpenAI API key"
+    echo "  - SUPABASE_ANON_KEY: Your Supabase anon key"
+    echo "  - GOOGLE_API_KEY: Your Google API key for Gemini"
 else
     print_status "Environment file already exists"
 fi
@@ -159,7 +159,7 @@ A complete Retrieval-Augmented Generation (RAG) system built with Next.js, FastA
 
 - **Document Upload**: Upload PDF and TXT files
 - **Vector Storage**: Store document embeddings in Supabase
-- **AI Chat**: Chat with your documents using OpenAI
+- **AI Chat**: Chat with your documents using Google Gemini
 - **Modern UI**: Beautiful, responsive interface
 - **Real-time Processing**: Fast document processing and chunking
 
@@ -168,7 +168,7 @@ A complete Retrieval-Augmented Generation (RAG) system built with Next.js, FastA
 - **Frontend**: Next.js 15 with TypeScript and Tailwind CSS
 - **Backend**: FastAPI with Python
 - **Database**: Supabase with PostgreSQL and pgvector
-- **AI**: OpenAI GPT-3.5-turbo and text-embedding-3-small
+- **AI**: Google Gemini models for embeddings and text generation
 - **File Processing**: PyPDF2 for PDF extraction
 
 ## 📋 Prerequisites
@@ -176,7 +176,7 @@ A complete Retrieval-Augmented Generation (RAG) system built with Next.js, FastA
 - Python 3.8+
 - Node.js 18+
 - Supabase account
-- OpenAI API key
+- Google API key for Gemini
 
 ## 🚀 Quick Start
 
@@ -195,8 +195,8 @@ Edit `backend/.env` with your API keys:
 
 ```env
 SUPABASE_URL=your_supabase_url_here
-SUPABASE_KEY=your_supabase_anon_key_here
-OPENAI_API_KEY=your_openai_api_key_here
+SUPABASE_ANON_KEY=your_supabase_anon_key_here
+GOOGLE_API_KEY=your_google_api_key_here
 ```
 
 ### 3. Set up Supabase Database
@@ -257,9 +257,9 @@ The backend uses FastAPI with the following key components:
 
 - **Document Processing**: PDF and TXT file upload and text extraction
 - **Text Chunking**: Intelligent text splitting with overlap
-- **Vector Embeddings**: OpenAI embeddings for semantic search
+- **Vector Embeddings**: Google Gemini embeddings for semantic search
 - **Vector Search**: Supabase pgvector for similarity search
-- **AI Generation**: OpenAI GPT-3.5-turbo for responses
+- **AI Generation**: Google Gemini models for responses
 
 ### Frontend Development
 

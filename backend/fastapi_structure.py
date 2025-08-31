@@ -169,7 +169,7 @@ class DocumentService:
     def __init__(self):
         self.supabase: Client = create_client(
             os.getenv("SUPABASE_URL"),
-            os.getenv("SUPABASE_KEY")
+            os.getenv("SUPABASE_ANON_KEY")
         )
     
     async def process_document(self, file, user_id: str) -> str:
@@ -287,7 +287,7 @@ class DocumentService:
 # services/embedding_service.py - Vector Embedding Generation
 # ================================
 
-import openai
+import google.generativeai as genai
 from typing import List
 import numpy as np
 import asyncio
@@ -296,10 +296,10 @@ class EmbeddingService:
     """Handles vector embedding generation and storage"""
     
     def __init__(self):
-        self.client = openai.OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+        genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
         self.supabase: Client = create_client(
             os.getenv("SUPABASE_URL"),
-            os.getenv("SUPABASE_KEY")
+            os.getenv("SUPABASE_ANON_KEY")
         )
     
     async def generate_embeddings(self, document_id: str):
@@ -318,16 +318,16 @@ class EmbeddingService:
         """Process a batch of chunks for embedding generation"""
         texts = [chunk['content'] for chunk in chunks]
         
-        # Generate embeddings using OpenAI
-        response = self.client.embeddings.create(
-            model="text-embedding-3-small",
-            input=texts
-        )
+        # Generate embeddings using Google Gemini
+        model = genai.GenerativeModel('embedding-001')
+        embeddings = []
+        
+        for text in texts:
+            result = model.embed_content(text)
+            embeddings.append(result.embedding)
         
         # Update chunks with embeddings
-        for chunk, embedding_data in zip(chunks, response.data):
-            embedding_vector = embedding_data.embedding
-            
+        for chunk, embedding_vector in zip(chunks, embeddings):
             # Store embedding in Supabase (pgvector handles the vector storage)
             self.supabase.table('document_chunks').update({
                 'embedding': embedding_vector

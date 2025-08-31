@@ -108,9 +108,9 @@ The backend uses FastAPI with the following key components:
 
 - **Document Processing**: PDF and TXT file upload and text extraction
 - **Text Chunking**: Intelligent text splitting with overlap
-- **Vector Embeddings**: OpenAI embeddings for semantic search
+- **Vector Embeddings**: Google Gemini embeddings for semantic search
 - **Vector Search**: Supabase pgvector for similarity search
-- **AI Generation**: OpenAI GPT-3.5-turbo for responses
+- **AI Generation**: Google Gemini models for responses
 
 ### Frontend Development
 

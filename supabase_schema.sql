@@ -58,7 +58,7 @@ CREATE TABLE IF NOT EXISTS public.document_chunks (
     word_count INTEGER NOT NULL DEFAULT 0,
     
     -- Vector embedding for semantic search
-    embedding vector(1536), -- OpenAI text-embedding-3-small dimension
+    embedding vector(768), -- Google Gemini embedding-001 dimension
     
     -- Chunk metadata
     page_number INTEGER, -- For PDFs

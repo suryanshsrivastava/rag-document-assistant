@@ -17,19 +17,19 @@ def test_supabase_connection():
     
     # Check if environment variables are set
     supabase_url = os.getenv("SUPABASE_URL")
-    supabase_key = os.getenv("SUPABASE_KEY")
-    openai_key = os.getenv("OPENAI_API_KEY")
+    supabase_key = os.getenv("SUPABASE_ANON_KEY")
+    google_key = os.getenv("GOOGLE_API_KEY")
     
     if not supabase_url or supabase_url == "your_supabase_url_here":
         print("❌ SUPABASE_URL not configured in backend/.env")
         return False
     
     if not supabase_key or supabase_key == "your_supabase_anon_key_here":
-        print("❌ SUPABASE_KEY not configured in backend/.env")
-        return False
+    print("❌ SUPABASE_ANON_KEY not configured in backend/.env")
+    return False
     
-    if not openai_key or openai_key == "your_openai_api_key_here":
-        print("❌ OPENAI_API_KEY not configured in backend/.env")
+    if not google_key or google_key == "your_google_api_key_here":
+        print("❌ GOOGLE_API_KEY not configured in backend/.env")
         return False
     
     print("✅ Environment variables are configured")

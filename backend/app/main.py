@@ -1,84 +1,83 @@
 from fastapi import FastAPI, HTTPException, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from typing import List, Optional
-import os
-from dotenv import load_dotenv
 from datetime import datetime
+from dotenv import load_dotenv
 import logging
 
-# Import implemented services
 from .services.rag_service import RAGService
-from .services.document_processor import DocumentProcessor
-from .services.vector_store import VectorStore
-from .services.gemini_client import GeminiClient
-from .services.chunking_service import ChunkingService
-from .database.models import Document, DocumentUploadResponse, ChatRequest, ChatResponse, DocumentInfo, HealthCheckResponse
-from .database.connection import get_supabase_client, test_database_connection, is_database_available
-
-# Load environment variables
-load_dotenv()
-
-# Initialize FastAPI app
-app = FastAPI(
-    title="RAG Document Assistant",
-    description="An AI-powered system for intelligent document conversations using RAG",
-    version="1.0.0"
+from .services.llm_provider import LLMProvider
+from .database.models import (
+    DocumentUploadResponse,
+    ChatRequest,
+    ChatResponse,
+    DocumentInfo,
+    HealthCheckResponse,
 )
 
-# CORS middleware for frontend communication
+load_dotenv()
+
+app = FastAPI(
+    title="RAG Document Assistant",
+    description="AI-powered document conversations using RAG",
+    version="1.0.0",
+)
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],  # Next.js default port
+    allow_origins=["http://localhost:3000"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Initialize RAG service with lazy loading
 rag_service = RAGService()
-
-# Configure logging
-logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Health check endpoint
+
+class LLMProviderRequest(BaseModel):
+    provider: str
+
+
+class LLMProviderResponse(BaseModel):
+    provider: Optional[str]
+    provider_name: Optional[str]
+
+
+class LLMProviderInfo(BaseModel):
+    id: str
+    name: str
+    description: str
+    configured: bool
+    config: dict
+
+
+class LLMProvidersListResponse(BaseModel):
+    providers: List[LLMProviderInfo]
+    current: Optional[str]
+
+
 @app.get("/")
 async def root():
-    """Health check endpoint"""
     return {"message": "RAG Document Assistant API is running"}
+
 
 @app.get("/health", response_model=HealthCheckResponse)
 async def health_check():
-    """Detailed health check with connection status"""
     try:
-        # Test database connection
-        db_connected = await test_database_connection()
-        
-        # Test Gemini connection (only if service is initialized)
-        gemini_connected = False
-        try:
-            if rag_service._initialized:
-                gemini_connected = await rag_service.gemini_client.test_connection()
-            else:
-                # Try to initialize just the Gemini client for testing
-                gemini_client = GeminiClient()
-                gemini_connected = await gemini_client.test_connection()
-        except Exception as e:
-            logger.error(f"Gemini connection test failed: {str(e)}")
-            gemini_connected = False
-        
-        # Determine overall status
-        status = "healthy" if db_connected else "unhealthy"
-        
+        connection_status = await rag_service.test_all_connections()
+        all_services_healthy = all(connection_status.values())
+        status = "healthy" if all_services_healthy else "degraded"
+
         return HealthCheckResponse(
             status=status,
             service="RAG Document Assistant",
             version="1.0.0",
-            database_connected=db_connected,
-            gemini_connected=gemini_connected,
-            timestamp=datetime.utcnow()
+            database_connected=connection_status.get("vector_store", False),
+            llm_connected=connection_status.get("llm", False),
+            embeddings_connected=connection_status.get("embeddings", False),
+            timestamp=datetime.utcnow(),
         )
     except Exception as e:
         return HealthCheckResponse(
@@ -86,117 +85,179 @@ async def health_check():
             service="RAG Document Assistant",
             version="1.0.0",
             database_connected=False,
-            gemini_connected=False,
-            timestamp=datetime.utcnow()
+            llm_connected=False,
+            embeddings_connected=False,
+            timestamp=datetime.utcnow(),
         )
 
-# Document management endpoints
+
+@app.get("/api/llm/providers", response_model=LLMProvidersListResponse)
+async def get_llm_providers():
+    try:
+        providers = rag_service.get_available_providers()
+        current = rag_service.get_current_llm_provider()
+        return LLMProvidersListResponse(
+            providers=[LLMProviderInfo(**p) for p in providers],
+            current=current.get("provider"),
+        )
+    except Exception as e:
+        logger.error(f"Error getting LLM providers: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail=f"Error getting LLM providers: {str(e)}"
+        )
+
+
+@app.get("/api/llm/current", response_model=LLMProviderResponse)
+async def get_current_llm_provider():
+    try:
+        current = rag_service.get_current_llm_provider()
+        return LLMProviderResponse(**current)
+    except Exception as e:
+        logger.error(f"Error getting current LLM provider: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail=f"Error getting current LLM provider: {str(e)}"
+        )
+
+
+@app.post("/api/llm/switch", response_model=LLMProviderResponse)
+async def switch_llm_provider(request: LLMProviderRequest):
+    try:
+        provider_str = request.provider.lower()
+        try:
+            provider = LLMProvider(provider_str)
+        except ValueError:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Invalid provider '{provider_str}'. Supported: lmstudio, gemini",
+            )
+
+        result = rag_service.switch_llm_provider(provider)
+
+        if not result.get("success"):
+            raise HTTPException(
+                status_code=500,
+                detail=f"Failed to switch provider: {result.get('error')}",
+            )
+
+        return LLMProviderResponse(
+            provider=result["provider"],
+            provider_name=result["provider_name"],
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error switching LLM provider: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail=f"Error switching LLM provider: {str(e)}"
+        )
+
+
+@app.post("/api/llm/test")
+async def test_llm_connection():
+    try:
+        connection_status = await rag_service.test_all_connections()
+        current = rag_service.get_current_llm_provider()
+
+        return {
+            "provider": current.get("provider"),
+            "provider_name": current.get("provider_name"),
+            "connected": connection_status.get("llm", False),
+        }
+    except Exception as e:
+        logger.error(f"Error testing LLM connection: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail=f"Error testing LLM connection: {str(e)}"
+        )
+
+
 @app.post("/api/documents/upload", response_model=DocumentUploadResponse)
 async def upload_document(file: UploadFile = File(...)):
-    """
-    Upload and process a document for RAG
-    
-    This endpoint:
-    1. Validates the uploaded file
-    2. Extracts text content
-    3. Chunks the text intelligently
-    4. Generates embeddings
-    5. Stores everything in the database
-    """
     try:
-        # Process document through RAG pipeline
         result = await rag_service.process_document(file)
-        
+
         return DocumentUploadResponse(
             document_id=result["document_id"],
             filename=result["filename"],
             status=result["status"],
             message="Document uploaded and processed successfully",
             file_size=result["file_size"],
-            word_count=result["word_count"]
+            word_count=result["word_count"],
         )
-        
+
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error processing document: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail=f"Error processing document: {str(e)}"
+        )
+
 
 @app.get("/api/documents", response_model=List[DocumentInfo])
 async def list_documents():
-    """
-    List all uploaded documents
-    """
     try:
-        # Get documents from RAG service
         documents = await rag_service.get_all_documents()
         return documents
     except Exception as e:
         logger.error(f"Error listing documents: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Error listing documents: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail=f"Error listing documents: {str(e)}"
+        )
+
 
 @app.delete("/api/documents/{document_id}")
 async def delete_document(document_id: str):
-    """
-    Delete a document and its embeddings
-    """
     try:
-        # Delete document through RAG service
         success = await rag_service.delete_document(document_id)
-        
+
         if success:
             return {"message": f"Document {document_id} deleted successfully"}
         else:
-            raise HTTPException(status_code=404, detail=f"Document {document_id} not found or could not be deleted")
-            
+            raise HTTPException(
+                status_code=404,
+                detail=f"Document {document_id} not found or could not be deleted",
+            )
+
     except Exception as e:
         logger.error(f"Error deleting document: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Error deleting document: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail=f"Error deleting document: {str(e)}"
+        )
 
-# Chat and RAG endpoints
+
 @app.post("/api/chat", response_model=ChatResponse)
 async def chat_with_documents(request: ChatRequest):
-    """
-    Chat with documents using RAG
-    
-    This endpoint:
-    1. Embeds the user query
-    2. Searches for similar document chunks
-    3. Generates a response using the retrieved context
-    4. Saves the conversation if a conversation_id is provided
-    """
     try:
-        # Process chat through RAG service
         result = await rag_service.chat_with_documents(
             user_message=request.message,
             document_ids=request.document_ids,
-            conversation_id=request.conversation_id
+            conversation_id=request.conversation_id,
         )
-        
+
         return ChatResponse(
             response=result["response"],
             sources=result["sources"],
             conversation_id=result["conversation_id"],
-            message_id=result["message_id"]
+            message_id=result["message_id"],
         )
-        
+
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error in chat: {str(e)}")
 
+
 @app.get("/api/conversations/{conversation_id}")
 async def get_conversation_history(conversation_id: str):
-    """
-    Get conversation history
-    """
-    # Not implemented yet
-    raise HTTPException(status_code=501, detail="Conversation history retrieval is not implemented yet.")
+    raise HTTPException(
+        status_code=501, detail="Conversation history retrieval is not implemented yet."
+    )
 
-# Search endpoints
+
 @app.get("/api/search")
 async def search_documents(query: str, document_ids: Optional[str] = None):
-    """
-    Search across documents without generating a conversational response
-    """
-    # Not implemented yet
-    raise HTTPException(status_code=501, detail="Semantic search is not implemented yet.")
+    raise HTTPException(
+        status_code=501, detail="Semantic search is not implemented yet."
+    )
+
 
 if __name__ == "__main__":
     import uvicorn
+
     uvicorn.run(app, host="0.0.0.0", port=8000)

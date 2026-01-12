@@ -5,6 +5,7 @@ import DocumentUpload from '../components/DocumentUpload';
 import ChatInterface from '../components/ChatInterface';
 import DocumentList from '../components/DocumentList';
 import Notification from '../components/Notification';
+import LLMProviderSelector from '../components/LLMProviderSelector';
 import { DocumentUploadResponse } from '../types/api';
 
 interface NotificationState {
@@ -40,6 +41,14 @@ export default function Home() {
     showNotification(error, 'error');
   };
 
+  const handleProviderChange = (provider: string, providerName: string) => {
+    showNotification(`Switched to ${providerName}`, 'success');
+  };
+
+  const handleProviderError = (error: string) => {
+    showNotification(error, 'error');
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       {/* Header */}
@@ -58,9 +67,10 @@ export default function Home() {
             </div>
             
             <div className="flex items-center space-x-4">
-              <div className="text-sm text-gray-500 dark:text-gray-400">
-                Powered by Gemini AI
-              </div>
+              <LLMProviderSelector
+                onProviderChange={handleProviderChange}
+                onError={handleProviderError}
+              />
             </div>
           </div>
         </div>

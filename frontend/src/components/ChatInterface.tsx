@@ -2,7 +2,8 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { api, ApiError } from '../lib/api';
-import { ChatMessage, ChatResponse } from '../types/api';
+import { getFileIcon } from '../lib/fileUtils';
+import { getUserMessageForApiError } from '../lib/errorMessages';
 
 interface ChatInterfaceProps {
   selectedDocumentIds?: string[];
@@ -13,7 +14,7 @@ interface Message {
   id: string;
   role: 'user' | 'assistant';
   content: string;
-  sources?: Array<Record<string, any>>;
+  sources?: Array<Record<string, unknown>>;
   timestamp: Date;
 }
 
@@ -71,32 +72,9 @@ export default function ChatInterface({
       setConversationId(response.conversation_id);
 
     } catch (error) {
-      let errorContent = 'Sorry, I encountered an error. Please try again.';
-      
-      if (error instanceof ApiError) {
-        switch (error.status) {
-          case 0:
-            errorContent = 'Unable to connect to server. Please check your internet connection and try again.';
-            break;
-          case 400:
-            errorContent = `Invalid request: ${error.message}`;
-            break;
-          case 413:
-            errorContent = 'The file you uploaded is too large. Please try a smaller file.';
-            break;
-          case 429:
-            errorContent = 'Too many requests. Please wait a moment and try again.';
-            break;
-          case 500:
-            errorContent = 'Server error. Please try again later.';
-            break;
-          case 503:
-            errorContent = 'Service temporarily unavailable. Please try again later.';
-            break;
-          default:
-            errorContent = `Error: ${error.message}`;
-        }
-      }
+      const errorContent = error instanceof ApiError
+        ? getUserMessageForApiError(error, 'chat')
+        : 'Sorry, I encountered an error. Please try again.';
       
       const errorMessage: Message = {
         id: `error-${Date.now()}`,
@@ -122,24 +100,10 @@ export default function ChatInterface({
     return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   };
 
-  const getFileIcon = (filename: string) => {
-    const ext = filename.split('.').pop()?.toLowerCase();
-    switch (ext) {
-      case 'pdf':
-        return '📄';
-      case 'docx':
-        return '📝';
-      case 'txt':
-        return '📄';
-      default:
-        return '📄';
-    }
-  };
-
   return (
     <div className={`flex flex-col h-full ${className}`}>
       {/* Messages Container */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+      <div className="flex-1 overflow-y-auto p-4 space-y-4" data-testid="chat-messages">
         {messages.length === 0 && !isLoading && (
           <div className="text-center text-gray-500 dark:text-gray-400 py-8">
             <div className="w-16 h-16 mx-auto mb-4 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center">
@@ -159,12 +123,14 @@ export default function ChatInterface({
           >
             <div
               className={`
+                chat-message ${message.role}
                 max-w-[80%] rounded-lg px-4 py-2 shadow-sm
                 ${message.role === 'user'
                   ? 'bg-blue-600 text-white'
                   : 'bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white'
                 }
               `}
+              data-testid={`chat-message-${message.role}`}
             >
               <div className="whitespace-pre-wrap">{message.content}</div>
               

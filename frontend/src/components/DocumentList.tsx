@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { api, ApiError } from '../lib/api';
 import { DocumentInfo } from '../types/api';
+import { getFileIcon, formatFileSize, formatDate } from '../lib/fileUtils';
 
 interface DocumentListProps {
   onDocumentSelect?: (documentIds: string[]) => void;
@@ -74,20 +75,6 @@ export default function DocumentList({
     onDocumentSelect(newSelected);
   };
 
-  const getFileIcon = (filename: string) => {
-    const ext = filename.split('.').pop()?.toLowerCase();
-    switch (ext) {
-      case 'pdf':
-        return '📄';
-      case 'docx':
-        return '📝';
-      case 'txt':
-        return '📄';
-      default:
-        return '📄';
-    }
-  };
-
   const getStatusColor = (status: string) => {
     switch (status.toLowerCase()) {
       case 'processed':
@@ -99,19 +86,6 @@ export default function DocumentList({
       default:
         return 'text-gray-600 bg-gray-100 dark:bg-gray-800';
     }
-  };
-
-  const formatFileSize = (bytes: number) => {
-    if (bytes === 0) return '0 Bytes';
-    const k = 1024;
-    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-  };
-
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString();
   };
 
   if (loading) {
@@ -160,7 +134,7 @@ export default function DocumentList({
   }
 
   return (
-    <div className={`space-y-2 ${className}`}>
+    <div className={`space-y-2 ${className}`} data-testid="document-list">
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-lg font-medium text-gray-900 dark:text-white">Documents</h3>
         <span className="text-sm text-gray-500 dark:text-gray-400">

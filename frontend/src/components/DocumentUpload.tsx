@@ -3,20 +3,14 @@
 import React, { useState, useCallback, useRef } from 'react';
 import { api, ApiError } from '../lib/api';
 import { DocumentUploadResponse } from '../types/api';
+import { MAX_FILE_SIZE_BYTES, ACCEPTED_FILE_TYPES } from '../lib/constants';
+import { getUserMessageForApiError } from '../lib/errorMessages';
 
 interface DocumentUploadProps {
   onUploadSuccess: (response: DocumentUploadResponse) => void;
   onUploadError: (error: string) => void;
   className?: string;
 }
-
-const ACCEPTED_FILE_TYPES = {
-  'application/pdf': '.pdf',
-  'application/vnd.openxmlformats-officedocument.wordprocessingml.document': '.docx',
-  'text/plain': '.txt',
-};
-
-const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 
 export default function DocumentUpload({
   onUploadSuccess,
@@ -33,7 +27,7 @@ export default function DocumentUpload({
       return 'File type not supported. Please upload PDF, DOCX, or TXT files.';
     }
     
-    if (file.size > MAX_FILE_SIZE) {
+    if (file.size > MAX_FILE_SIZE_BYTES) {
       return 'File size too large. Maximum size is 10MB.';
     }
     
@@ -79,29 +73,9 @@ export default function DocumentUpload({
       setIsUploading(false);
       setUploadProgress(0);
       
-      let errorMessage = 'Upload failed. Please try again.';
-      
-      if (error instanceof ApiError) {
-        switch (error.status) {
-          case 0:
-            errorMessage = 'Unable to connect to server. Please check your internet connection.';
-            break;
-          case 400:
-            errorMessage = `Invalid file: ${error.message}`;
-            break;
-          case 413:
-            errorMessage = 'File too large. Maximum size is 10MB.';
-            break;
-          case 415:
-            errorMessage = 'Unsupported file type. Please upload PDF, DOCX, or TXT files.';
-            break;
-          case 500:
-            errorMessage = 'Server error. Please try again later.';
-            break;
-          default:
-            errorMessage = error.message;
-        }
-      }
+      const errorMessage = error instanceof ApiError
+        ? getUserMessageForApiError(error, 'upload')
+        : 'Upload failed. Please try again.';
       
       onUploadError(errorMessage);
     }

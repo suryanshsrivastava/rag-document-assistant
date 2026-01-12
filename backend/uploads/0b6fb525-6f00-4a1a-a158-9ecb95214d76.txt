@@ -1,7 +1,0 @@
-Microsoft.WindowsTerminal
-
-Browser=Google.Chrome
-Multimedia=VideoLAN.VLC
-
-Obsidian.Obsidian
-Appest.TickTick

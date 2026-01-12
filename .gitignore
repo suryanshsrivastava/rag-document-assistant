@@ -170,3 +170,12 @@ build/
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
 docs/
+
+# Backend data directories
+backend/document_metadata/
+backend/faiss_db/
+backend/uploads/
+
+# Playwright test outputs
+frontend/playwright-report/
+frontend/test-results/
